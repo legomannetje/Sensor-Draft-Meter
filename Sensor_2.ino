@@ -1,31 +1,18 @@
-/*
-  Advanced_I2C.ino
-  Brian R Taylor
-  brian.taylor@bolderflight.com
-
-  Copyright (c) 2017 Bolder Flight Systems
-
-  Permission is hereby granted, free of charge, to any person obtaining a copy of this software
-  and associated documentation files (the "Software"), to deal in the Software without restriction,
-  including without liitation the rights to use, copy, modify, merge, publish, distribute,
-  sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
-  furnished to do so, subject to the following conditions:
-
-  The above copyright notice and this permission notice shall be included in all copies or
-  substantial portions of the Software.
-
-  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
-  BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-  NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-  DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/
-
 #include "MPU9250.h"
 
 // an MPU9250 object with the MPU-9250 sensor on I2C bus 0 with address 0x68
 MPU9250 IMU(Wire, 0x68);
 int status;
+
+#define accConstant 0.05
+#define sampleFreq 5      // Sampling at 100HZ
+float accel[3];
+float gyro[3];
+float pitch;
+float roll;
+float draft;
+
+unsigned long previousMillis = 0;
 
 void setup() {
   // serial to display data
@@ -51,15 +38,8 @@ void setup() {
   IMU.setSrd(19);
 }
 
-#define accConstant 0.05
-#define sampleFreq 5      // Sampling at 100HZ
-float accel[3];
-float gyro[3];
-float pitch;
-float roll;
-unsigned long previousMillis = 0;
-
 void getData() {
+  // Place the data in arrays
   accel[0] = IMU.getAccelX_mss();
   accel[1] = IMU.getAccelY_mss();
   accel[2] = IMU.getAccelZ_mss();
@@ -71,6 +51,8 @@ void getData() {
 
 void ConvertIMU()
 {
+  //Some magic from the Internet, adopted it to work with our thing
+  
   static float pitchAcc, rollAcc;
 
   // Integrate the gyroscope data -> int(angularSpeed) = angle
@@ -96,39 +78,24 @@ float calcAccel() {
   return draft;
 }
 void loop() {
-  // read the sensor
+  // read the sensor data
   IMU.readSensor();
-  //Serial.print(calcAccel());
 
+  //Set the data in the arrays
   getData();
+  // Convert the data to pitch and roll
   ConvertIMU();
-  calcAccel();
+  // Calculate the angle of the sensor
+  draft = calcAccel();
+  
+  //Print out the Pitch, Roll and Angle
   Serial.print(pitch);
   Serial.print("\t");
   Serial.print(roll);
   Serial.print("\t");
-  Serial.print(calcAccel());
-  Serial.print("\t");
-  //  // display the data
-  //  Serial.print(IMU.getAccelX_mss(),6);
-  //  Serial.print("\t");
-  //  Serial.print(IMU.getAccelY_mss(),6);
-  //  Serial.print("\t");
-  //  Serial.print(IMU.getAccelZ_mss(),6);
-  //  Serial.print("\t");
-  //  Serial.print(IMU.getGyroX_rads(),6);
-  //  Serial.print("\t");
-  //  Serial.print(IMU.getGyroY_rads(),6);
-  //  Serial.print("\t");
-  //  Serial.print(IMU.getGyroZ_rads(),6);
-  //  Serial.print("\t");
-  //  Serial.print(IMU.getMagX_uT(),6);
-  //  Serial.print("\t");
-  //  Serial.print(IMU.getMagY_uT(),6);
-  //  Serial.print("\t");
-  //  Serial.print(IMU.getMagZ_uT(),6);
-  //  Serial.print("\t");
-  //  Serial.println(IMU.getTemperature_C(),6);
+  Serial.print(draft);
   Serial.print('\n');
+  
+  //Wait a little while for the next reading
   delay(150);
 }
